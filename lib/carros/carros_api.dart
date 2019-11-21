@@ -1,7 +1,9 @@
 import 'dart:convert' as convert;
+import 'dart:io';
 
 import 'package:carros/carros/carro.dart';
 import 'package:carros/carros/carro_dao.dart';
+import 'package:carros/carros/upload_service.dart';
 import 'package:carros/login/usuario.dart';
 import 'package:carros/pages/api_response.dart';
 import 'package:http/http.dart' as http;
@@ -41,8 +43,17 @@ class CarrosApi {
     }
   }
 
-  static Future<ApiResponse<bool>> save(Carro c) async {
+  static Future<ApiResponse<bool>> save(Carro c, File file) async {
     try {
+
+      if(file != null){
+        ApiResponse<String> response = await UploadService.upload(file);
+        if(response.ok){
+          String urlFoto = response.result;
+          c.urlFoto = urlFoto;
+        }
+      }
+
       Usuario user = await Usuario.get();
 
       Map<String, String> headers = {
@@ -84,6 +95,35 @@ class CarrosApi {
     } catch (e) {
       print(e);
       return ApiResponse.error("Não foi possivel salvar o carro");
+    }
+  }
+
+  static delete(Carro c) async {
+    try {
+      Usuario user = await Usuario.get();
+
+      Map<String, String> headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer ${user.token}"
+      };
+
+      var url = 'http://carros-springboot.herokuapp.com/api/v2/carros/${c.id}';
+
+      print("DELETE >> $url");
+
+      var response = await http.delete(url, headers: headers);
+
+      print('response status ${response.statusCode}');
+      print('response body $response.body');
+
+      if (response.statusCode == 200) {
+        return ApiResponse.ok(true);
+      }
+
+      return ApiResponse.error("Não foi possivel deletar o carro");
+    } catch (e) {
+      print(e);
+      return ApiResponse.error("Não foi possivel deletar o carro");
     }
   }
 }
