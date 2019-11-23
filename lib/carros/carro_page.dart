@@ -4,11 +4,15 @@ import 'package:carros/carros/carro_form_page.dart';
 import 'package:carros/carros/loripsum_api.dart';
 import 'package:carros/favoritos/favorito_service.dart';
 import 'package:carros/pages/api_response.dart';
+import 'package:carros/pages/mapa_page.dart';
+import 'package:carros/pages/video_page.dart';
 import 'package:carros/utils/alert.dart';
+import 'package:carros/utils/event_bus.dart';
 import 'package:carros/utils/nav.dart';
 import 'package:carros/widgets/text.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'carros_api.dart';
 
@@ -50,11 +54,11 @@ class _CarroPageState extends State<CarroPage> {
         actions: <Widget>[
           IconButton(
             icon: Icon(Icons.place),
-            onPressed: _onClickMapa,
+            onPressed: () {_onClickMapa(context);},
           ),
           IconButton(
             icon: Icon(Icons.videocam),
-            onPressed: _onClickVideo,
+            onPressed: () {_onClickVideo(context);},
           ),
           PopupMenuButton<String>(
             onSelected: _onClickPopupMenu,
@@ -132,9 +136,23 @@ class _CarroPageState extends State<CarroPage> {
     );
   }
 
-  void _onClickMapa() {}
+  void _onClickMapa(context) {
+    if(carro.latitude != null && carro.longitude != null){
+      //launch(carro.urlVideo);
+      push(context, MapaPage(carro));
+    }else{
+      alert(context, "Mapa não encontrado!!");
+    }
+  }
 
-  void _onClickVideo() {}
+  void _onClickVideo(context) {
+    if(carro.urlVideo != null && carro.urlVideo.isNotEmpty){
+      launch(carro.urlVideo);
+      //push(context, VideoPage(carro));
+    }else{
+      alert(context, "Video não encontrado!!");
+    }
+  }
 
   _onClickPopupMenu(String value) {
     switch (value) {
@@ -156,7 +174,7 @@ class _CarroPageState extends State<CarroPage> {
   }
 
   void _onClickFavorito() async {
-    bool fav = await FavoritoService.favoritar(carro);
+    bool fav = await FavoritoService.favoritar(context, carro);
 
     setState(() {
       color = fav ? Colors.red : Colors.grey;
@@ -196,6 +214,7 @@ class _CarroPageState extends State<CarroPage> {
 
     if (response.ok) {
       alert(context, "Carro deletado com sucesso", callback: (){
+        EventBus.get(context).sendEvent(CarroEvent("carro_deletado", carro.tipo));
         Navigator.pop(context);
       });
     } else {
